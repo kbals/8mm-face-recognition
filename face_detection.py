@@ -11,8 +11,14 @@ import logging
 class PersonDetection:
     def __init__(self, face_encoding, face_image, video_file, timestamp):
         self.face_encoding = face_encoding
-        self.face_image = face_image
+        self.face_images = [face_image]  # Store list of face images
         self.appearances = [(video_file, timestamp)]
+        
+    def add_appearance(self, video_file, timestamp, face_image):
+        self.appearances.append((video_file, timestamp))
+        # Keep up to 5 best face images
+        if len(self.face_images) < 5:
+            self.face_images.append(face_image)
 
 def create_output_folder():
     # Create timestamp string
@@ -110,7 +116,7 @@ def process_videos(folder_path, output_folder, debug=False):
                             found_match = False
                             for person in people:
                                 if face_recognition.compare_faces([person.face_encoding], face_encoding)[0]:
-                                    person.appearances.append((video_file, timestamp))
+                                    person.add_appearance(video_file, timestamp, face_image)
                                     found_match = True
                                     logging.debug(f"Matched existing person at {timestamp}")
                                     break
@@ -136,34 +142,101 @@ def process_videos(folder_path, output_folder, debug=False):
 def generate_report(people, output_folder):
     logging.info("Generating report...")
     
-    # Save face images
-    for i, person in enumerate(tqdm(people, desc="Saving face images")):
-        filename = f"person_{i}.jpg"
-        save_face_image(person.face_image, filename, output_folder)
+    # Save face images with unique identifiers for each person and image
+    for person_idx, person in enumerate(tqdm(people, desc="Saving face images")):
+        for image_idx, face_image in enumerate(person.face_images):
+            filename = f"person_{person_idx}_image_{image_idx}.jpg"
+            save_face_image(face_image, filename, output_folder)
     
-    # Generate HTML
+    # Generate HTML with improved styling and collapsible sections
     html_template = """
     <!DOCTYPE html>
     <html>
     <head>
         <title>Face Detection Report</title>
         <style>
-            .person { margin-bottom: 30px; }
-            .face-image { max-width: 200px; }
+            body { 
+                font-family: Arial, sans-serif;
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 20px;
+            }
+            .person { 
+                margin-bottom: 30px;
+                border: 1px solid #ddd;
+                padding: 20px;
+                border-radius: 8px;
+            }
+            .face-images {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 15px;
+                flex-wrap: wrap;
+            }
+            .face-image { 
+                max-width: 200px;
+                border-radius: 4px;
+            }
+            .collapsible {
+                background-color: #f1f1f1;
+                cursor: pointer;
+                padding: 10px;
+                width: 100%;
+                border: none;
+                text-align: left;
+                outline: none;
+                border-radius: 4px;
+            }
+            .active, .collapsible:hover {
+                background-color: #ddd;
+            }
+            .content {
+                display: none;
+                padding: 10px;
+                overflow: hidden;
+            }
+            .appearances-count {
+                float: right;
+                background-color: #666;
+                color: white;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 0.9em;
+            }
         </style>
+        <script>
+            function toggleContent(element) {
+                element.classList.toggle("active");
+                var content = element.nextElementSibling;
+                if (content.style.display === "block") {
+                    content.style.display = "none";
+                } else {
+                    content.style.display = "block";
+                }
+            }
+        </script>
     </head>
     <body>
         <h1>Face Detection Report</h1>
         {% for person in people %}
         <div class="person">
             <h2>Person {{ loop.index }}</h2>
-            <img class="face-image" src="detected_faces/person_{{ loop.index0 }}.jpg">
-            <h3>Appearances:</h3>
-            <ul>
-            {% for video, timestamp in person.appearances %}
-                <li>{{ video }} at {{ timestamp }}</li>
-            {% endfor %}
-            </ul>
+            <div class="face-images">
+                {% set outer_loop = loop %}
+                {% for i in range(person.face_images|length) %}
+                <img class="face-image" src="detected_faces/person_{{ outer_loop.index0 }}_image_{{ i }}.jpg">
+                {% endfor %}
+            </div>
+            <button class="collapsible" onclick="toggleContent(this)">
+                Appearances <span class="appearances-count">{{ person.appearances|length }}</span>
+            </button>
+            <div class="content">
+                <ul>
+                {% for video, timestamp in person.appearances %}
+                    <li>{{ video }} at {{ timestamp }}</li>
+                {% endfor %}
+                </ul>
+            </div>
         </div>
         {% endfor %}
     </body>
