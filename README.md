@@ -36,7 +36,7 @@ The script will create a new folder named `face_detection_results_YYYYMMDD_HHMMS
 
 ## Development Process
 
-This project was developed through an iterative chat process. Here are the key interactions:
+This project was developed through an iterative chat process with Cursor. Below are the key interactions. Often, some errors occured, or it wasn't exctly what I wanted. In these cases, I asked for improvements or made some manual changes.
 
 ### Initial Request
 > I want to do face recognition in a series of videos. Enumerate all videos in a specified folder. I want to detect and identify people, and give a list of all the people detected. The same people in different videos should be correctly identified as the same people. As a result, I want to create an HTML page with the list of people, and per person a clear image of their face. Per person also list the names of the videos and the timestamps where they are detected.
@@ -51,6 +51,45 @@ This project was developed through an iterative chat process. Here are the key i
 3. Organized output in timestamped folders:
 > Create the report and the detected faces all in a separate folder, that is named with the current timestamp
 
+4. Added parallelization:
+> Add parallelization
+
+5. Improved face quality:
+> The quality of the face recognition is not well enough. People are seen as same people when they are not and the other way around
+
+
+### Dependency problems
+To install the dependencies, I tried to use:
+```
+pip install face-recognition opencv-python jinja2
+```
+
+However, this resulted in some errors compiling ```dlib```, which I fixed by installing the dependencies in the following way:
+
+1. First re-install Xcode Command Line Tools:
+```
+sudo rm -rf /Library/Developer/CommandLineTools
+xcode-select --install
+```
+
+2. Then install cmake, pkg-config and dlib:
+```
+brew install cmake pkg-config dlib
+```
+
+3. Then set the following environment variables:
+```
+export CFLAGS="-I$(xcrun --show-sdk-path)/usr/include"
+export CPPFLAGS="-I$(xcrun --show-sdk-path)/usr/include"
+export LDFLAGS="-L$(xcrun --show-sdk-path)/usr/lib"
+```
+
+4. Then install the dependencies:
+```
+pip install face-recognition opencv-python jinja2
+```
+
+
 ## Implementation Details
 
 - Uses `face_recognition` library for face detection and encoding
@@ -59,67 +98,11 @@ This project was developed through an iterative chat process. Here are the key i
 - Compares face encodings to identify the same person across videos
 - Uses Jinja2 templating for HTML report generation
 - Includes debug mode for testing with limited video processing
+- It does parallel processing to use all CPU cores.
 
 ## Notes
 
 - Face recognition accuracy depends on video quality, lighting, and face angles
 - Processing speed depends on video resolution and frame sampling rate
-- Debug mode can be enabled by setting `debug_mode = True` for testing
-
-## Potential Improvements
-
-- Face alignment before comparison
-- Confidence thresholds for face matching
-- Clustering to merge similar faces
-- Manual naming of detected people
-- Additional metadata (face position, etc.)
-- Parallel processing for better performance
-
-# Cursor prompts
-This project was developed through an iterative chat process with Cursor. Here are the key interactions:
-
-```
-I want to do face recognition in a series of videos. Enumerate all videos in a specified folder. I want to detect and identify people, and give a list of all the people detected. The same people in different videos should be correctly identified as the same people. As a result, I want to create an HTML page with the list of people, and per person a clear image of their face. Per person also list the names of the videos and the timestamps where they are detected.
-```
-
-Then I wanted to add debug output and progress bars:
-
-```
-add debug output and progress bars
-```
-
-
-```
-The faces that are extracted in the image are too small. can you extend the bounding box of the faces to make it 3 times bigger?
-```
-
-```
-Create the report and the detected faces all in a separate folder, that is named with the current timestamp
-```
-
-To install the dependencies, I tried to use:
-```
-pip install face-recognition opencv-python jinja2
-```
-
-However, this resulted in some errors compiling ```dlib```, which I fixed by installing the dependencies in the following way:
-
-```
-sudo rm -rf /Library/Developer/CommandLineTools
-xcode-select --install
-```
-
-```
-brew install cmake pkg-config dlib
-```
-
-```
-export CFLAGS="-I$(xcrun --show-sdk-path)/usr/include"
-export CPPFLAGS="-I$(xcrun --show-sdk-path)/usr/include"
-export LDFLAGS="-L$(xcrun --show-sdk-path)/usr/lib"
-```
-
-```
-pip install face-recognition opencv-python jinja2
-```
+- Debug mode can be enabled by setting `debug_mode = True` for testing, in this case it only processes the first minute of max 3 videos.
 
