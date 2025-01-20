@@ -1,0 +1,3 @@
+face_detection_results_*
+.venv/
+.DS_Store
